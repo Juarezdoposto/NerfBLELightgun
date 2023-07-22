@@ -1,0 +1,229 @@
+
+ 
+#include <BleCombo.h>
+#include <Wire.h>
+#include <MPU6050_tockn.h>
+
+MPU6050 mpu6050(Wire);
+#define BLOCK_Mouse_BUTTON 17
+#define  Trigger_BUTTON  23
+
+#define  Trigger_A_BUTTON    25
+#define  Trigger_S_BUTTON    26
+#define  Trigger_D_BUTTON    27
+#define  Trigger_F_BUTTON    13
+
+#define  Trigger_Q_BUTTON    16
+#define  Trigger_W_BUTTON    18
+#define  Trigger_E_BUTTON    32
+#define  Trigger_R_BUTTON    19
+
+int gyrointerval = 10;
+
+int previousTrigger_BUTTONState = HIGH;
+int previousTrigger_A_BUTTONState = HIGH;
+int previousTrigger_S_BUTTONState = HIGH;
+int previousTrigger_D_BUTTONState = HIGH;
+int previousTrigger_F_BUTTONState = HIGH;
+
+int previousTrigger_Q_BUTTONState = HIGH;
+int previousTrigger_W_BUTTONState = HIGH;
+int previousTrigger_E_BUTTONState = HIGH;
+int previousTrigger_R_BUTTONState = HIGH;
+
+unsigned long current_millis, last_millis = 0;
+
+int buttons[10] = {16,17, 18, 19, 27 ,13,23,25,26 ,32};
+
+float scale=8.3;//5.8 é fraco,7.2 é aceitavel
+void setup() {
+    Serial.begin(115200);
+
+  
+ for (int i = 0; i < 10; i++) {
+    pinMode(buttons[i], INPUT_PULLUP);
+  }
+Wire.begin(21,22,0x68 );//sda,scl e endereço do mpu
+  Wire. setClock ( 400000);
+  mpu6050.begin();
+ mpu6050.calcGyroOffsets(true);
+ 
+  Serial.println("Starting work!");
+  Keyboard.begin();
+  Mouse.begin();
+}
+
+void loop() {
+  current_millis = millis();//marca tempo
+  if(Keyboard.isConnected()) {
+
+   if (current_millis - last_millis > gyrointerval) {   //Se a diferença entre os dois ultimos ciclos for maior que o intervalo de leitura do giróscopio....
+     mpu6050.update();
+      //static float LAST_ANGLE_X = 0, LAST_ANGLE_Y = 0 ;
+ static float x = 0, y = 0;
+ // bool mpuValidX = true, mpuValidY = true;
+
+x=(mpu6050.getGyroX()/80)*scale;// sem querer eu troquei os eixos,vai o x inves do z ,mpu6050.getGyroY()/80*scale;
+y=mpu6050.getGyroZ()/80*scale;//valor de correção do giroscópio
+
+  
+    
+ if(digitalRead(BLOCK_Mouse_BUTTON) == 0)
+  {
+    x=0.0;
+    y=0.0;
+  
+  }
+  
+
+
+//
+ //int8_t  mouseMove[2]={x,y};
+ 
+ static float xyRemainder[2];
+ 
+  float * flt_mouseXY[2] = {&x, &y};
+  int32_t int_mouseXY[2] = {(int32_t) x, (int32_t) y};
+    
+  // Store floating point remainders and insert them if > 1
+  for (int i = 0; i < 2; i++) {
+    if (*flt_mouseXY[i] != 0) {
+      float remainderTemp = *flt_mouseXY[i] - int_mouseXY[i];
+      
+      if (abs(remainderTemp) >= 0.1) {
+        xyRemainder[i] += remainderTemp;
+      }
+ 
+      if (xyRemainder[i] > 1) {
+        int_mouseXY[i] += 1;
+        xyRemainder[i]--;
+      }
+      else if (xyRemainder[i] < -1) {
+        int_mouseXY[i] -= 1;
+        xyRemainder[i]++;
+      }
+    }
+  }
+
+  
+
+ //
+
+ // Calculate +/- signs beforehand to save cycles
+  int8_t mouseSign[2] = {1, 1}; //
+  for(int i = 0; i < 2; i++){
+    // Single if statement faster than x/|x|
+    if(int_mouseXY[i] < 0){
+      mouseSign[i] = -1;
+    }
+  }
+  while((int_mouseXY[0] != 0 || int_mouseXY[1] != 0) ) {
+  int8_t mouseUpdate[2];//
+    
+    for(int i = 0; i < 2; i++){
+      if(abs(int_mouseXY[i]) >= 127){
+        mouseUpdate[i] = 127 * mouseSign[i];
+        int_mouseXY[i] = (abs(int_mouseXY[i]) - 127) * mouseSign[i];
+      }
+      else if(abs(int_mouseXY[i]) > 0){
+        mouseUpdate[i] = (int8_t) int_mouseXY[i];//(int8_t)
+        int_mouseXY[i] = 0;
+      }
+      else{
+        mouseUpdate[i] = 0;
+      }
+    }
+    Mouse.move(-mouseUpdate[0], mouseUpdate[1]);
+  }
+  last_millis = current_millis;
+    }
+int currentTrigger_BUTTONState = digitalRead(Trigger_BUTTON);
+    int currentTrigger_A_BUTTONState = digitalRead(Trigger_A_BUTTON);
+    int currentTrigger_S_BUTTONState = digitalRead(Trigger_S_BUTTON);
+    int currentTrigger_D_BUTTONState = digitalRead(Trigger_D_BUTTON);
+    
+    int currentTrigger_F_BUTTONState = digitalRead(Trigger_F_BUTTON);
+    
+    int currentTrigger_Q_BUTTONState = digitalRead(Trigger_Q_BUTTON);
+    int currentTrigger_W_BUTTONState = digitalRead(Trigger_W_BUTTON);
+    int currentTrigger_E_BUTTONState = digitalRead(Trigger_E_BUTTON);
+    int currentTrigger_R_BUTTONState = digitalRead(Trigger_R_BUTTON);
+
+     if (currentTrigger_A_BUTTONState != previousTrigger_A_BUTTONState) {
+      if (currentTrigger_A_BUTTONState == LOW)
+       Keyboard.press('a');
+      else
+       Keyboard.release('a');
+    }
+    previousTrigger_A_BUTTONState = currentTrigger_A_BUTTONState;
+
+    if (currentTrigger_S_BUTTONState != previousTrigger_S_BUTTONState) {
+      if (currentTrigger_S_BUTTONState == LOW)
+       Keyboard.press('s');
+      else
+       Keyboard.release('s');
+    }
+    previousTrigger_S_BUTTONState = currentTrigger_S_BUTTONState;
+
+   if (currentTrigger_D_BUTTONState != previousTrigger_D_BUTTONState) {
+      if (currentTrigger_D_BUTTONState == LOW)
+       Keyboard.press('d');
+      else
+       Keyboard.release('d');
+    }
+    previousTrigger_D_BUTTONState = currentTrigger_D_BUTTONState;
+
+   if (currentTrigger_F_BUTTONState != previousTrigger_F_BUTTONState) {
+      if (currentTrigger_F_BUTTONState == LOW)
+       Keyboard.press('f');
+      else
+       Keyboard.release('f');
+    }
+    previousTrigger_F_BUTTONState = currentTrigger_F_BUTTONState;
+
+       if (currentTrigger_Q_BUTTONState != previousTrigger_Q_BUTTONState) {
+      if (currentTrigger_Q_BUTTONState == LOW)
+       Keyboard.press('q');
+      else
+       Keyboard.release('q');
+    }
+    previousTrigger_Q_BUTTONState = currentTrigger_Q_BUTTONState;
+
+    if (currentTrigger_W_BUTTONState != previousTrigger_W_BUTTONState) {
+      if (currentTrigger_W_BUTTONState == LOW)
+       Keyboard.press('w');
+      else
+       Keyboard.release('w');
+    }
+    previousTrigger_W_BUTTONState = currentTrigger_W_BUTTONState;
+
+    if (currentTrigger_E_BUTTONState != previousTrigger_E_BUTTONState) {
+      if (currentTrigger_E_BUTTONState == LOW)
+       Keyboard.press('e');
+      else
+       Keyboard.release('e');
+    }
+    previousTrigger_E_BUTTONState = currentTrigger_E_BUTTONState;
+
+    if (currentTrigger_R_BUTTONState != previousTrigger_R_BUTTONState) {
+      if (currentTrigger_R_BUTTONState == LOW)
+       Keyboard.press('r');
+      else
+       Keyboard.release('r');
+    }
+    previousTrigger_R_BUTTONState = currentTrigger_R_BUTTONState;
+
+if (currentTrigger_BUTTONState != previousTrigger_BUTTONState) {
+      if (currentTrigger_BUTTONState == LOW)
+       Mouse.press(MOUSE_LEFT);
+      else
+       Mouse.release(MOUSE_LEFT);
+    }
+    previousTrigger_BUTTONState = currentTrigger_BUTTONState;
+
+
+
+  }
+  
+
+}
